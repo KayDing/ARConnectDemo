@@ -142,25 +142,14 @@
 - (void)renderer:(id<SCNSceneRenderer>)renderer didAddNode:(SCNNode *)node forAnchor:(ARAnchor *)anchor{
     if ([anchor.name isEqualToString:@"founction"]) {
         NSLog(@"%@",anchor);
-//        SCNBox *phere = [SCNBox boxWithWidth:0.01 height:0.02 length:0.01 chamferRadius:0];
-//        phere.firstMaterial.diffuse.contents = [UIColor redColor];
-//        phere.firstMaterial.specular.contents = [UIColor whiteColor];
-//        SCNNode *carbonNode = [SCNNode nodeWithGeometry:phere];
-//        carbonNode.position = SCNVector3Make(0, 0, 0);
-//        [node addChildNode:carbonNode];
-//        [self.sceneView.scene.rootNode addChildNode:carbonNode];
-//
-//        SCNNode *carbonNode = [SCNNode nodeWithGeometry:[self carbonAtom]];
-        int z;
-        for (int i = -10; i < 10; i++) {
-             for (int j = -10; j < 10; j++) {
-            //y = i * i;
-            z = i*i + j*j;
-            SCNNode *oxygenNode = [SCNNode nodeWithGeometry:[self carbonAtom]];
-            oxygenNode.position = SCNVector3Make(0.01 * i, 0.01 * j, z*0.0001);
-            [node addChildNode:oxygenNode];
-        }
-    }
+        SCNBox *phere = [SCNBox boxWithWidth:0.01 height:0.02 length:0.01 chamferRadius:0];
+        phere.firstMaterial.diffuse.contents = [UIColor redColor];
+        phere.firstMaterial.specular.contents = [UIColor whiteColor];
+        SCNNode *carbonNode = [SCNNode nodeWithGeometry:phere];
+        carbonNode.position = SCNVector3Make(anchor.transform.columns[3].x, anchor.transform.columns[3].y, anchor.transform.columns[3].z);
+        [node addChildNode:carbonNode];
+        [self.sceneView.scene.rootNode addChildNode:carbonNode];
+
     }
 }
 
@@ -228,16 +217,10 @@
     if (hitResultArr!=nil && ![hitResultArr isKindOfClass:[NSNull class]]&&hitResultArr.count!=0) {
         ARHitTestResult *hitResult = hitResultArr[0];
         ARAnchor *anchor = [[ARAnchor alloc] initWithName:@"founction" transform: hitResult.worldTransform];
+        
+        //可以在这里添加note，可定位添加
         [_sceneView.session addAnchor: anchor];
         NSLog(@"%@",anchor);
-        SCNSphere *phere = [SCNSphere sphereWithRadius:20];
-        phere.firstMaterial.diffuse.contents = [UIColor redColor];
-        phere.firstMaterial.specular.contents = [UIColor whiteColor];
-        SCNNode *carbonNode = [SCNNode nodeWithGeometry:phere];
-        carbonNode.position = SCNVector3Make(hitResult.worldTransform.columns[3].x,
-                                             hitResult.worldTransform.columns[3].y,
-                                             hitResult.worldTransform.columns[3].z);
-        [self.sceneView.scene.rootNode addChildNode:carbonNode];
         NSData *data = [NSKeyedArchiver archivedDataWithRootObject:anchor requiringSecureCoding:YES error:nil];
         [self.multipeerSession sendToAllPeers:data];
     }

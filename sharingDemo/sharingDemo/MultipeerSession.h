@@ -7,17 +7,16 @@
 //
 
 #import <Foundation/Foundation.h>
-#import <ARKit/ARKit.h>
-#import <SceneKit/SceneKit.h>
 #import <MultipeerConnectivity/MultipeerConnectivity.h>
 
 NS_ASSUME_NONNULL_BEGIN
 
 @interface MultipeerSession : NSObject
 
-- (instancetype)ReceivedDataHandeler:(NSData *)data fromPeer:(MCPeerID *)peerID;
+- (instancetype)initWithReceivedDataHandeler:(NSData *)data fromPeer:(MCPeerID *)peerID;
 - (void)sendToAllPeers: (NSData *)data;
 - (NSArray *)getConnectedPeers;
++ (instancetype) MultipeerSessionWithReceivedData:(NSData *)data fromPeer:(MCPeerID *)peer;
 
 @end
 

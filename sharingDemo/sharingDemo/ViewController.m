@@ -38,14 +38,14 @@
     [self.view addSubview: self.sessionInfoLabel];
     [self.view addSubview: self.resetButton];
     
-    
-    self.currentTrackingState = ARTrackingStateNormal;
-    [self.multipeerSession ReceivedDataHandeler: nil fromPeer: nil];
-    [self receivedData:nil fromPeer:nil];
-
-    // Set the view's delegate
+     // Set the view's delegate
     self.sceneView.delegate = self;
     self.sceneView.session.delegate = self;
+    self.currentTrackingState = ARTrackingStateNormal;
+    NSData *data = [[NSData alloc] init];
+    self.multipeerSession = [MultipeerSession MultipeerSessionWithReceivedData:data fromPeer:self.mapProvider];
+    [self receivedData:data fromPeer:nil];
+
     
     // Show statistics such as fps and timing information
     self.sceneView.showsStatistics = YES;
@@ -92,7 +92,7 @@
     if (worldMap) {
         self.arConfig.planeDetection = ARPlaneDetectionHorizontal;
         self.arConfig.initialWorldMap = worldMap;
-        [self.sceneView.session runWithConfiguration:self.arConfig options:ARSessionRunOptionResetTracking & ARSessionRunOptionRemoveExistingAnchors];
+        [self.sceneView.session runWithConfiguration:self.arConfig options:ARSessionRunOptionResetTracking | ARSessionRunOptionRemoveExistingAnchors];
         self.mapProvider = peer;
     }
     ARAnchor *anchor = [NSKeyedUnarchiver unarchivedObjectOfClass:[ARAnchor class] fromData:data error:nil];
@@ -109,11 +109,14 @@
     if (camera.trackingState == ARTrackingStateNormal) {
         NSArray *arr1 = frame.anchors;
         NSArray *arr2 = [self.multipeerSession getConnectedPeers];
-        if (arr1!=nil && ![arr1 isKindOfClass:[NSNull class]]&&arr1.count!=0 &&arr2!=nil && ![arr2 isKindOfClass:[NSNull class]]&&arr2.count!=0) {
-            message = [self.multipeerSession getConnectedPeers][0];
-        }
-        else
+        if (arr1==nil && [arr1 isKindOfClass:[NSNull class]]&&arr1.count==0 &&arr2==nil && [arr2 isKindOfClass:[NSNull class]]&&arr2.count==0) {
             message = @"Move around to map the environment, or wait to join a shared session.";
+        }
+        if (arr2!=nil && ![arr2 isKindOfClass:[NSNull class]]&&arr2.count!=0 && self.mapProvider == nil) {
+            MCPeerID *peer = [self.multipeerSession getConnectedPeers][0];
+            message = [NSString stringWithFormat:@"Connected with %@",peer.displayName];
+        }
+        
     }
     else if (camera.trackingState == ARTrackingStateLimited){
         if (camera.trackingStateReason == ARTrackingStateReasonExcessiveMotion) {
@@ -141,26 +144,14 @@
 // Override to create and configure nodes for anchors added to the view's session.
 - (void)renderer:(id<SCNSceneRenderer>)renderer didAddNode:(SCNNode *)node forAnchor:(ARAnchor *)anchor{
     if ([anchor.name isEqualToString:@"founction"]) {
-        NSLog(@"%@",anchor);
         SCNBox *phere = [SCNBox boxWithWidth:0.01 height:0.02 length:0.01 chamferRadius:0];
         phere.firstMaterial.diffuse.contents = [UIColor redColor];
         phere.firstMaterial.specular.contents = [UIColor whiteColor];
         SCNNode *carbonNode = [SCNNode nodeWithGeometry:phere];
         carbonNode.position = SCNVector3Make(anchor.transform.columns[3].x, anchor.transform.columns[3].y, anchor.transform.columns[3].z);
         [node addChildNode:carbonNode];
-        [self.sceneView.scene.rootNode addChildNode:carbonNode];
-
     }
 }
-
-- (SCNGeometry *) carbonAtom
-{
-    SCNSphere *phere = [SCNSphere sphereWithRadius:0.01];
-    phere.firstMaterial.diffuse.contents = [UIColor colorWithHue:0.7292 saturation:0.0630 brightness:0.9961 alpha:0.5];
-    phere.firstMaterial.specular.contents = [UIColor whiteColor];
-    return phere;
-}
-
 
 #pragma mark - ARSession Delegate
 - (void)session:(ARSession *)session cameraDidChangeTrackingState:(ARCamera *)camera{
@@ -246,8 +237,9 @@
 }
 
 - (void)resetTracking:(UIButton *)btn{
-    self.arConfig.planeDetection = ARPlaneDetectionHorizontal;
-    [self.sceneView.session runWithConfiguration:self.arConfig options: ARSessionRunOptionRemoveExistingAnchors|ARSessionRunOptionResetTracking];
+    ARWorldTrackingConfiguration *configuration = [[ARWorldTrackingConfiguration alloc] init];
+    configuration.planeDetection = ARPlaneDetectionHorizontal;
+    [self.sceneView.session runWithConfiguration:configuration options: ARSessionRunOptionRemoveExistingAnchors|ARSessionRunOptionResetTracking];
 }
 
 
@@ -265,25 +257,26 @@
         _sendMapButton = [[UIButton alloc] initWithFrame:CGRectMake(SCREEN_WIDTH/2-100, SCREEN_HEIGHT - 150, 200, 50)];
         [_sendMapButton setTitle:@"send world map" forState: UIControlStateNormal];
         [_sendMapButton setBackgroundColor:[UIColor lightGrayColor]];
-        [_sendMapButton addTarget:self action:@selector(shareSession:) forControlEvents:UIControlEventTouchUpInside];
+        [_sendMapButton setTintColor:[UIColor blueColor]];
+        [_sendMapButton addTarget:self action:@selector(shareSession:) forControlEvents:UIControlEventTouchDown];
     }
     return _sendMapButton;
 }
 
 - (UIButton *)resetButton{
     if (!_resetButton) {
-        _resetButton = [[UIButton alloc] initWithFrame:CGRectMake(SCREEN_WIDTH-40, 30, 20, 20)];
+        _resetButton = [[UIButton alloc] initWithFrame:CGRectMake(SCREEN_WIDTH-50, 40, 30, 30)];
         [_resetButton setBackgroundImage:[UIImage imageNamed:@"restart"] forState:UIControlStateNormal];
         [_resetButton setBackgroundImage:[UIImage imageNamed:@"restartPressed"] forState:UIControlStateHighlighted];
         _resetButton.backgroundColor = [UIColor clearColor];
-        [_resetButton addTarget:self action:@selector(resetTracking:) forControlEvents:UIControlEventTouchUpInside];
+        [_resetButton addTarget:self action:@selector(resetTracking:) forControlEvents:UIControlEventTouchDown];
     }
     return _resetButton;
 }
 
 - (UILabel *)sessionInfoLabel{
     if (!_sessionInfoLabel) {
-        _sessionInfoLabel = [[UILabel alloc] initWithFrame: CGRectMake(20, 20, 200, 60)];
+        _sessionInfoLabel = [[UILabel alloc] initWithFrame: CGRectMake(20, 40, 200, 60)];
         _sessionInfoLabel.backgroundColor = [UIColor clearColor];
         _sessionInfoLabel.numberOfLines = 0;
         _sessionInfoLabel.font = [UIFont systemFontOfSize:13];

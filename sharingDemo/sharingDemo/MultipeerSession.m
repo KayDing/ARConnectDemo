@@ -19,23 +19,29 @@
 
 @implementation MultipeerSession
 
-- (instancetype)ReceivedDataHandeler:(NSData *)data fromPeer:(MCPeerID *)peerID{
-    self.serviceType = @"ar-multi-sample";
-    [MultipeerSession init];
-    self.myPeerId = [_myPeerId initWithDisplayName: UIDevice.currentDevice.name];
-    
-    self.session = [_session initWithPeer:_myPeerId securityIdentity:nil encryptionPreference:MCEncryptionRequired];
-    _session.delegate = self;
-    
-    self.serviceAdvertiser = [_serviceAdvertiser initWithPeer:_myPeerId discoveryInfo:nil serviceType:_serviceType];
-    _serviceAdvertiser.delegate = self;
-    [_serviceAdvertiser startAdvertisingPeer];
-    
-    self.serviseBrowser = [_serviseBrowser initWithPeer: _myPeerId serviceType: _serviceType];
-    _serviseBrowser.delegate = self;
-    [_serviseBrowser startBrowsingForPeers];
-    
+
+- (instancetype)initWithReceivedDataHandeler:(NSData *)data fromPeer:(MCPeerID *)peerID{
+    self = [super init];
+    if(self){
+        self.serviceType = @"ar-multi-sample";
+        self.myPeerId = [[MCPeerID alloc] initWithDisplayName:UIDevice.currentDevice.name];
+        
+        self.session = [[MCSession alloc] initWithPeer:self.myPeerId securityIdentity:nil encryptionPreference:MCEncryptionRequired];
+        self.session.delegate = self;
+        
+        self.serviceAdvertiser = [[MCNearbyServiceAdvertiser alloc] initWithPeer:_myPeerId discoveryInfo:nil serviceType:_serviceType];
+        _serviceAdvertiser.delegate = self;
+        [self.serviceAdvertiser startAdvertisingPeer];
+        
+        self.serviseBrowser = [[MCNearbyServiceBrowser alloc] initWithPeer: _myPeerId serviceType: _serviceType];
+        self.serviseBrowser.delegate = self;
+        [self.serviseBrowser startBrowsingForPeers];
+    }
     return self;
+}
+
++ (instancetype) MultipeerSessionWithReceivedData:(NSData *)data fromPeer:(MCPeerID *)peer{
+    return [[self alloc] initWithReceivedDataHandeler:data fromPeer:peer];
 }
 
 - (void)sendToAllPeers: (NSData *)data{
@@ -48,22 +54,23 @@
 
 #pragma mark - session delegate
 - (void)session:(nonnull MCSession *)session didFinishReceivingResourceWithName:(nonnull NSString *)resourceName fromPeer:(nonnull MCPeerID *)peerID atURL:(nullable NSURL *)localURL withError:(nullable NSError *)error {
-    
+    NSLog(@"This service does not send %@.",resourceName);
 }
 
 - (void)session:(nonnull MCSession *)session didReceiveData:(nonnull NSData *)data fromPeer:(nonnull MCPeerID *)peerID {
-    [self ReceivedDataHandeler:data fromPeer:peerID];
+    [MultipeerSession MultipeerSessionWithReceivedData:data fromPeer:peerID];
 }
 
 - (void)session:(nonnull MCSession *)session didReceiveStream:(nonnull NSInputStream *)stream withName:(nonnull NSString *)streamName fromPeer:(nonnull MCPeerID *)peerID {
-    
+    NSLog(@"This service does not send %@",streamName);
 }
 
 - (void)session:(nonnull MCSession *)session didStartReceivingResourceWithName:(nonnull NSString *)resourceName fromPeer:(nonnull MCPeerID *)peerID withProgress:(nonnull NSProgress *)progress {
-    
+    NSLog(@"This service does not send %@",resourceName);
 }
 
 - (void)session:(nonnull MCSession *)session peer:(nonnull MCPeerID *)peerID didChangeState:(MCSessionState)state {
+    
 }
 
 

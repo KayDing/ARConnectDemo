@@ -10,8 +10,14 @@
 #import <MultipeerConnectivity/MultipeerConnectivity.h>
 
 NS_ASSUME_NONNULL_BEGIN
+@protocol MultipeerSessionDelegate <NSObject>
+@required
+- (void)receivedData:(NSData *)data fromPeers:(MCPeerID *)peer;
+@end
 
 @interface MultipeerSession : NSObject
+
+@property(strong, nonatomic) id<MultipeerSessionDelegate>delegate;
 
 - (instancetype)initWithReceivedDataHandeler:(NSData *)data fromPeer:(MCPeerID *)peerID;
 - (void)sendToAllPeers: (NSData *)data;

@@ -7,11 +7,11 @@
 //
 
 #import "ViewController.h"
-#import "MultipeerSession.h"
+#import "MultipeerSession.h"    //分享的类
 #define SCREEN_WIDTH [UIScreen mainScreen].bounds.size.width
 #define SCREEN_HEIGHT [UIScreen mainScreen].bounds.size.height
 
-@interface ViewController () <ARSCNViewDelegate, ARSessionDelegate, SCNPhysicsContactDelegate, UIGestureRecognizerDelegate>
+@interface ViewController () <ARSCNViewDelegate, ARSessionDelegate, SCNPhysicsContactDelegate, UIGestureRecognizerDelegate,MultipeerSessionDelegate>
 
 @property (nonatomic, strong) IBOutlet ARSCNView *sceneView;
 @property (retain, nonatomic) MultipeerSession *multipeerSession;
@@ -21,9 +21,9 @@
 @property (nonatomic) ARTrackingState currentTrackingState;
 @property (strong, nonatomic) UILabel *sessionInfoLabel;
 @property (strong, nonatomic) UILabel *mappingStatusLabel;
-@property (strong, nonatomic) UIButton *sendMapButton;
-@property (strong, nonatomic) UIButton *resetButton;
-@property (strong, nonatomic) UITapGestureRecognizer *tapGesture;
+@property (strong, nonatomic) UIButton *sendMapButton; //分享按钮
+@property (strong, nonatomic) UIButton *resetButton;   //重置按钮
+@property (strong, nonatomic) UITapGestureRecognizer *tapGesture;   //点击手势
 
 @end
 
@@ -37,14 +37,15 @@
     [self.view addSubview: self.mappingStatusLabel];
     [self.view addSubview: self.sessionInfoLabel];
     [self.view addSubview: self.resetButton];
-    
      // Set the view's delegate
     self.sceneView.delegate = self;
     self.sceneView.session.delegate = self;
     self.currentTrackingState = ARTrackingStateNormal;
     NSData *data = [[NSData alloc] init];
+    
+    //初始化
     self.multipeerSession = [MultipeerSession MultipeerSessionWithReceivedData:data fromPeer:self.mapProvider];
-    [self receivedData:data fromPeer:nil];
+    self.multipeerSession.delegate = self;
 
     
     // Show statistics such as fps and timing information
@@ -87,7 +88,9 @@
     [self.sceneView.session pause];
 }
 
-- (void) receivedData:(NSData *)data fromPeer:(MCPeerID *)peer{
+
+//MultipeerSessionDelegate -- 接收到附近设备的数据后调用
+- (void)receivedData:(NSData *)data fromPeers:(MCPeerID *)peer{
     ARWorldMap *worldMap = [NSKeyedUnarchiver unarchivedObjectOfClass: [ARWorldMap class] fromData:data error:nil];
     if (worldMap) {
         self.arConfig.planeDetection = ARPlaneDetectionHorizontal;
@@ -104,6 +107,7 @@
     
 }
 
+// 更新显示session信息的标签控件
 - (void)updateSessionInfoLabelforFrame:(ARFrame *)frame trackingStateOfCamera:(ARCamera *)camera{
     NSString *message = [[NSString alloc] init];
     if (camera.trackingState == ARTrackingStateNormal) {
@@ -139,11 +143,10 @@
 }
 
 #pragma mark - ARSCNViewDelegate
-
-
-// Override to create and configure nodes for anchors added to the view's session.
+// 点击后Session内的anchor更新，调用此函数添加视图
 - (void)renderer:(id<SCNSceneRenderer>)renderer didAddNode:(SCNNode *)node forAnchor:(ARAnchor *)anchor{
     if ([anchor.name isEqualToString:@"founction"]) {
+        //视图插在这
         SCNBox *phere = [SCNBox boxWithWidth:0.01 height:0.02 length:0.01 chamferRadius:0];
         phere.firstMaterial.diffuse.contents = [UIColor redColor];
         phere.firstMaterial.specular.contents = [UIColor whiteColor];
@@ -154,10 +157,12 @@
 }
 
 #pragma mark - ARSession Delegate
+//跟踪现实世界的信息变化时调用
 - (void)session:(ARSession *)session cameraDidChangeTrackingState:(ARCamera *)camera{
     [self updateSessionInfoLabelforFrame:session.currentFrame trackingStateOfCamera:camera];
 }
 
+//更新坐标后调用
 -(void)session:(ARSession *)session didUpdateFrame:(ARFrame *)frame{
     NSString *message = [[NSString alloc] init];
     switch (frame.worldMappingStatus) {
@@ -188,6 +193,7 @@
     [self resetTracking:nil];
 }
 
+//置于后台了调用
 - (void)sessionWasInterrupted:(ARSession *)session {
     // Inform the user that the session has been interrupted, for example, by presenting an overlay
     self.sessionInfoLabel.text = @"Session was interrupted";
@@ -202,7 +208,7 @@
 }
 
 #pragma mark - sharing
-
+//手势调用方法
 - (void)handleSceneTap:(UITapGestureRecognizer *)tapGesture{
     NSArray *hitResultArr = [_sceneView hitTest:[tapGesture locationInView:_sceneView] types:ARHitTestResultTypeExistingPlane | ARHitTestResultTypeEstimatedHorizontalPlane];
     if (hitResultArr!=nil && ![hitResultArr isKindOfClass:[NSNull class]]&&hitResultArr.count!=0) {
@@ -221,6 +227,7 @@
     
 }
 
+//分享按钮调用方法
 - (void)shareSession:(UIButton *)btn{
     [self.sceneView.session getCurrentWorldMapWithCompletionHandler:^(ARWorldMap * _Nullable worldMap, NSError * _Nullable error) {
         ARWorldMap *map = worldMap;
@@ -236,6 +243,7 @@
     }];
 }
 
+//重置按钮调用
 - (void)resetTracking:(UIButton *)btn{
     ARWorldTrackingConfiguration *configuration = [[ARWorldTrackingConfiguration alloc] init];
     configuration.planeDetection = ARPlaneDetectionHorizontal;
@@ -254,10 +262,10 @@
 
 - (UIButton *)sendMapButton{
     if (!_sendMapButton) {
-        _sendMapButton = [[UIButton alloc] initWithFrame:CGRectMake(SCREEN_WIDTH/2-100, SCREEN_HEIGHT - 150, 200, 50)];
+        _sendMapButton = [[UIButton alloc] initWithFrame:CGRectMake(20, SCREEN_HEIGHT - 80, 50, 50)];
         [_sendMapButton setTitle:@"send world map" forState: UIControlStateNormal];
-        [_sendMapButton setBackgroundColor:[UIColor lightGrayColor]];
-        [_sendMapButton setTintColor:[UIColor blueColor]];
+        [_sendMapButton setImage:[UIImage imageNamed:@"share"] forState:UIControlStateNormal];
+        [_sendMapButton setImage:[UIImage imageNamed:@"shareDefault"] forState:UIControlStateHighlighted];
         [_sendMapButton addTarget:self action:@selector(shareSession:) forControlEvents:UIControlEventTouchDown];
     }
     return _sendMapButton;
@@ -287,10 +295,11 @@
 
 - (UILabel *)mappingStatusLabel{
     if (!_mappingStatusLabel) {
-        _mappingStatusLabel = [[UILabel alloc] initWithFrame: CGRectMake(SCREEN_WIDTH/2-50, SCREEN_HEIGHT - 180, 100, 30)];
+        _mappingStatusLabel = [[UILabel alloc] initWithFrame: CGRectMake(SCREEN_WIDTH/2-50, SCREEN_HEIGHT - 50, 100, 30)];
         _mappingStatusLabel.backgroundColor = [UIColor clearColor];
         _mappingStatusLabel.textAlignment = NSTextAlignmentCenter;
     }
     return _mappingStatusLabel;
 }
+
 @end

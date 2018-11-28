@@ -7,10 +7,11 @@
 //
 
 #import "MultipeerSession.h"
+#import "ViewController.h"
 
 @interface MultipeerSession () <MCSessionDelegate, MCNearbyServiceBrowserDelegate, MCNearbyServiceAdvertiserDelegate>
-@property(strong, nonatomic) NSString *serviceType;
-@property(strong, nonatomic) MCPeerID *myPeerId;
+@property(strong, nonatomic) NSString *serviceType; //本机信息，判断设备是否支持ARKit
+@property(strong, nonatomic) MCPeerID *myPeerId;    //本机的ID
 @property(strong, nonatomic) MCSession *session;
 @property(strong, nonatomic) MCNearbyServiceAdvertiser *serviceAdvertiser;
 @property(strong, nonatomic) MCNearbyServiceBrowser *serviseBrowser;
@@ -18,6 +19,7 @@
 @end
 
 @implementation MultipeerSession
+
 
 
 - (instancetype)initWithReceivedDataHandeler:(NSData *)data fromPeer:(MCPeerID *)peerID{
@@ -59,6 +61,7 @@
 
 - (void)session:(nonnull MCSession *)session didReceiveData:(nonnull NSData *)data fromPeer:(nonnull MCPeerID *)peerID {
     [MultipeerSession MultipeerSessionWithReceivedData:data fromPeer:peerID];
+    [self.delegate receivedData:data fromPeers:peerID];
 }
 
 - (void)session:(nonnull MCSession *)session didReceiveStream:(nonnull NSInputStream *)stream withName:(nonnull NSString *)streamName fromPeer:(nonnull MCPeerID *)peerID {
